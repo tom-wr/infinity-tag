@@ -7,11 +7,16 @@
 	import fl.transitions.TweenEvent;
 	import flash.utils.setTimeout;
 	import flash.display.DisplayObjectContainer;
+	import components.Bubble;
+	import components.Factoid;
+	import utility.FactManager;
 	
 	public final class TagManager extends MovieClip {
 		
 		private static var _instance:TagManager;
 		public var currentTags:Array = [];
+		
+		public var consolidatedTags:Array = [];
 		
 		private var currentQuestion:Number = 1;
 		private var unlockedQuestionsStart:Array = [1, 90, 91, 99];
@@ -36,12 +41,8 @@
 		
 		public function getQuestion()
 		{
-			trace(unlockedQuestions);
 			unlockedQuestions.sort(Array.NUMERIC | Array.DESCENDING);
-			trace(unlockedQuestions);
 			var nextQ = unlockedQuestions.pop();
-			trace(unlockedQuestions);
-			trace("next: " + nextQ);
 			return tags[nextQ];
 		}
 		
@@ -49,7 +50,6 @@
 		{
 			unlockedQuestions = new Array();
 			unlockedQuestions = unlockedQuestions.concat(unlockedQuestionsStart);
-			trace("new Array: " + unlockedQuestions);
 			currentTags = new Array();
 		}
 		
@@ -79,26 +79,43 @@
 			for(var i = 0; i < currentTags.length; i++)
 			{
 				var tag = currentTags[i];
-				setTimeout(tagTween, i * 200, tag, xPos, yPos);
+				var createBubble = (i == 0) ? true : false;
+				setTimeout(tagTween, i * 200, tag, xPos, yPos, createBubble);
 			}
 			return submitted;
 		}
 		
-		private function tagTween(tag:MovieClip, xPos:Number, yPos:Number)
+		private function tagTween(tag:MovieClip, xPos:Number, yPos:Number, createBubble:Boolean = false)
 		{
 			var tagTweenX:Tween = new Tween(tag, "x", Regular.easeIn, tag.x, xPos, 0.75, true); 
 			var tagTweenY:Tween = new Tween(tag, "y", Regular.easeIn, tag.y, yPos, 0.75, true);
 			var tagTweenScaleX:Tween = new Tween(tag, "scaleX", Regular.easeOut, 1, 0.5, 0.75, true);
 			var tagTweenScaleY:Tween = new Tween(tag, "scaleY", Regular.easeOut, 1, 0.5, 0.75, true);
-			tagTweenY.addEventListener(TweenEvent.MOTION_FINISH, destroyTag(tag))
+			tagTweenY.addEventListener(TweenEvent.MOTION_FINISH, destroyTag(tag, createBubble))
 		}
 		
-		private function destroyTag(tag:MovieClip):Function
+		private function destroyTag(tag:MovieClip, createBubble:Boolean = false):Function
 		{
 			return function (e:TweenEvent):void
 			{
 				stage.removeChild(tag);
 				Glob.getInstance().stats.updateTagStats();
+				if(createBubble && FactManager.getInstance().factAvailable())
+				{
+					var factoid:MovieClip = new Factoid(tag.x, tag.y, stage);
+					stage.addChild(factoid);
+					//var bubble:Bubble = new Bubble(tag.x, tag.y);
+					//stage.addChild(bubble);
+				}
+			}
+		}
+		
+		public function consolidateTags()
+		{
+			consolidatedTags = new Array();
+			for each(var tag in currentTags)
+			{
+				consolidatedTags.push(tag.tag);
 			}
 		}
 		
@@ -109,7 +126,7 @@
 				answers: {
 					a: {
 						title: "People",
-						next: [20, 21],
+						next: [20, 21, 22],
 						tag: "people"
 					},
 					b: {
@@ -119,10 +136,12 @@
 					},
 					c: {
 						title: "Vehicles",
+						next: [41],
 						tag: "ground-vehicle"
 					},
 					d: {
 						title: "Animals",
+						next: [51],
 						tag: "animal"
 					}
 				}
@@ -159,6 +178,24 @@
 					},
 					c: {
 						title: "I'm unsure"
+					}
+				}
+			},
+			22: {
+				kind: 2,
+				question: "How many people can you see?",
+				answers: {
+					a: {
+						title: "2 - 5",
+						tag: "small-group"
+					},
+					b: {
+						title: "6+",
+						tag: "large-group"
+					},
+					c: {
+						title: "one",
+						tag: "one-person"
 					}
 				}
 			},
@@ -228,6 +265,46 @@
 					}
 				}
 			},
+			41: {
+				kind: 1,
+				question: "What type of vehicle can you see?",
+				answers: {
+					a: {
+						title: "Car",
+						tag: "car"
+					},
+					b: {
+						title: "Other",
+						tag: "other-vehicle"
+					},
+					c: {
+						title: "Tank",
+						tag: "tank"
+					},
+					d: {
+						title: "Jeep",
+						tag: "jeep"
+					}
+				}
+			},
+			51: {
+				kind: 1,
+				question: "What type of animal can you see?",
+				answers: {
+					a: {
+						title: "Other",
+						tag: "other"
+					},
+					b: {
+						title: "Cat",
+						tag: "cat"
+					},
+					c: {
+						title: "Dog",
+						tag: "dog"
+					}
+				}
+			},
 			90: {
 				kind: 2,
 				question: "Was the photograph taken indoors or outside?",
@@ -256,22 +333,6 @@
 					b: {
 						title: "No",
 						tag: "b-and-w"
-					},
-					c: {
-						title: "I'm unsure"
-					}
-				}
-			},
-			11: {
-				question: "Can you see any aircraft in this photograph?",
-				answers: {
-					a: {
-						title: "Yes",
-						tag: "aircraft"
-					},
-					b: {
-						title: "No",
-						tag: "no-aircraft"
 					},
 					c: {
 						title: "I'm unsure"

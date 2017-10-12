@@ -205,7 +205,7 @@
 		private function submit()
 		{
 			PhotoGrid.getInstance().unfocus();
-			var tagNumber:Number = TagManager.getInstance().tagCount();
+			TagManager.getInstance().consolidateTags();
 			setTimeout(Glob.getInstance().stats.updateStats, 800);
 		}
 		
